@@ -1,0 +1,12 @@
+{
+  "apex-intercept": {
+    "enabled": true,
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python3 /data/data/com.termux/files/home/.gemini/config/plugins/apex-orchestrator/hook_wrapper.py",
+        "timeout": 300
+      }
+    ]
+  }
+}

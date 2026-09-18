@@ -1,0 +1,7 @@
+{
+  "name": "apex-orchestrator",
+  "version": "1.0.0",
+  "description": "Deeply integrates the 5-Tier Apex Cognitive Architecture into Antigravity.",
+  "hooks": ["hooks.json"],
+  "skills": ["skills/apex-master/SKILL.md"]
+}
