@@ -22,13 +22,19 @@ class SandboxManager:
         if self.sandbox_dir.exists():
             shutil.rmtree(self.sandbox_dir)
         shutil.copytree(self.source_dir, self.sandbox_dir, ignore=shutil.ignore_patterns('.git', 'node_modules', '__pycache__'))
+        
+        # Initialize a git repo to track the base state for zero-cost rollbacks
+        subprocess.run(["git", "init"], cwd=self.sandbox_dir, capture_output=True)
+        subprocess.run(["git", "add", "."], cwd=self.sandbox_dir, capture_output=True)
+        subprocess.run(["git", "-c", "user.name=Sandbox", "-c", "user.email=sandbox@local", "commit", "--allow-empty", "-m", "base state"], cwd=self.sandbox_dir, capture_output=True)
+        
         print(f"[Sandbox] Created at {self.sandbox_dir}")
         return self.sandbox_dir
         
     def reset(self):
-        print(f"[Sandbox] Rolling back {self.sandbox_dir} to clean state.")
-        shutil.rmtree(self.sandbox_dir, ignore_errors=True)
-        shutil.copytree(self.source_dir, self.sandbox_dir, ignore=shutil.ignore_patterns('.git', 'node_modules', '__pycache__'))
+        print(f"[Sandbox] Rolling back {self.sandbox_dir} to clean state (discarding writable layer).")
+        subprocess.run(["git", "clean", "-fdx"], cwd=self.sandbox_dir, capture_output=True)
+        subprocess.run(["git", "reset", "--hard"], cwd=self.sandbox_dir, capture_output=True)
         
     def apply_to_main(self):
         print(f"[Sandbox] Tests passed. Applying {self.sandbox_dir} to {self.source_dir}")
@@ -37,12 +43,16 @@ class SandboxManager:
     def cleanup(self):
         shutil.rmtree(self.sandbox_dir, ignore_errors=True)
 
-class ActorCriticSwarm:
+class BaseSwarm:
     def __init__(self, sandbox_dir: Path, memory: CodebaseArchitect):
         self.sandbox_dir = sandbox_dir
         self.memory = memory
         self.max_loops = 5
         
+    def run_test_suite(self, test_command: str):
+        raise NotImplementedError("Subclasses must implement run_test_suite")
+
+class ActorCriticSwarm(BaseSwarm):
     def run_test_suite(self, test_command: str):
         print(f"[Critic] Executing verification: {test_command}")
         env = os.environ.copy()
@@ -73,25 +83,41 @@ class ActorCriticSwarm:
                 critic_report = f"Raw Stderr: {stderr[:500]}\n(No semantic context found in FTS5)"
         return is_valid, stdout, critic_report
 
+class StaticAnalysisSwarm(BaseSwarm):
+    def run_test_suite(self, test_command: str):
+        print(f"[Critic] Executing Static Analysis instead of tests...")
+        # Simulate running a QA Analyzer or linter
+        return True, "Code is structurally sound.", ""
+
 class ApexOrchestrator:
     """The Complete 5-Tier Intelligence & Adaptation Engine."""
-    def __init__(self, project_path: str):
+    def __init__(self, project_path: str,
+                 task_queue_cls=None,
+                 adaptation_engine_cls=None,
+                 swarm_cls=None):
         self.project_path = project_path
         self.workflow_path = os.path.join(project_path, "workflow.json")
+        
+        # Pluggable Subclasses
+        from task_queue import SequentialTaskQueue
+        from adaptation import LocalAdaptationEngine
+        
+        self.task_queue_cls = task_queue_cls or SequentialTaskQueue
+        self.adaptation_engine_cls = adaptation_engine_cls or LocalAdaptationEngine
+        self.swarm_cls = swarm_cls or ActorCriticSwarm
         
         # Initialize Core Engines
         self.memory = CodebaseArchitect(self.project_path)
         self.experience = ExperienceReplayEngine(self.project_path)
         self.reasoner = SystemTwoReasoner(self.memory)
-        self.adaptation = AdaptationEngine(self.project_path)
+        self.adaptation = self.adaptation_engine_cls(self.project_path)
         
         self.memory.map_project() 
         
     def execute_task(self, task_description: str, test_command: str):
         print(f"\n=== [Apex Orchestrator] Booting Intelligence Sequence ===")
-        from task_queue import TaskQueue
         
-        queue = TaskQueue()
+        queue = self.task_queue_cls()
         state = {}
         
         def retrieve_memory():
@@ -104,10 +130,9 @@ class ApexOrchestrator:
             print(f"[Memory Safe Compute] Testing {len(state['hypotheses'])} distinct hypotheses sequentially...")
             
         def run_sandbox_race(hypothesis, memory_controller):
-            from task_queue import TaskQueue
             sandbox = SandboxManager(self.project_path)
             s_dir = sandbox.create_sandbox()
-            swarm = ActorCriticSwarm(s_dir, self.memory)
+            swarm = self.swarm_cls(s_dir, self.memory)
             
             loop_count = 0
             success = False

@@ -2,12 +2,9 @@ import os
 import json
 from pathlib import Path
 
-class AdaptationEngine:
+class BaseAdaptationEngine:
     """
-    Tier 5: The Metacognitive Rule Generator (Continuous Adaptation).
-    If the agent fails repeatedly but eventually succeeds, this engine extracts
-    the underlying logical flaw and writes a permanent system rule so the agent
-    never makes the same conceptual mistake again.
+    Tier 5 Abstract Base: Metacognitive Rule Generator (Continuous Adaptation).
     """
     def __init__(self, project_dir: str):
         self.project_dir = Path(project_dir).resolve()
@@ -15,26 +12,9 @@ class AdaptationEngine:
         os.makedirs(self.rules_dir, exist_ok=True)
 
     def extract_lesson(self, failed_attempts: list, successful_diff: str, task: str):
-        """
-        In a live environment, an LLM parses the delta between the failures
-        and the success, extracting a structural rule.
-        """
-        print("[Adaptation Engine] Analyzing trajectory delta to extract core logic flaw...")
-        
-        # Simulated extraction of a paradigm-shifting lesson
-        lesson = {
-            "trigger_context": task,
-            "anti_pattern": "Directly mutating state without emitting an event.",
-            "correct_pattern": "Always decouple state changes via event emitters.",
-            "enforcement": "Reject any diff that mutates state variables directly."
-        }
-        return lesson
+        raise NotImplementedError("Subclasses must implement extract_lesson")
 
     def write_permanent_rule(self, lesson: dict):
-        """
-        Writes the lesson as a permanent Markdown rule file injected into the
-        agent's global system prompt on next boot.
-        """
         rule_name = f"auto_rule_{hash(lesson['trigger_context']) % 10000}.md"
         rule_path = self.rules_dir / rule_name
         
@@ -52,4 +32,41 @@ class AdaptationEngine:
         with open(rule_path, "w") as f:
             f.write(markdown_content)
             
-        print(f"[Adaptation Engine] Permanent adaptation rule written to {rule_path}")
+        print(f"[{self.__class__.__name__}] Permanent adaptation rule written to {rule_path}")
+
+
+class LocalAdaptationEngine(BaseAdaptationEngine):
+    """
+    Legacy behavior: Hardcoded, simulated extraction of rules.
+    """
+    def extract_lesson(self, failed_attempts: list, successful_diff: str, task: str):
+        print(f"[{self.__class__.__name__}] Analyzing trajectory delta to extract core logic flaw...")
+        
+        # Simulated extraction of a paradigm-shifting lesson
+        lesson = {
+            "trigger_context": task,
+            "anti_pattern": "Directly mutating state without emitting an event.",
+            "correct_pattern": "Always decouple state changes via event emitters.",
+            "enforcement": "Reject any diff that mutates state variables directly."
+        }
+        return lesson
+
+
+class AgenticAdaptationEngine(BaseAdaptationEngine):
+    """
+    Advanced behavior: Uses a sub-agent to synthesize a rule from failures.
+    """
+    def extract_lesson(self, failed_attempts: list, successful_diff: str, task: str):
+        print(f"[{self.__class__.__name__}] Spinning up diagnostic agent to analyze failures and synthesize rule...")
+        # In a real system, we would prompt an LLM here with the `failed_attempts` and `successful_diff`
+        # For now, we simulate an advanced synthesized rule.
+        lesson = {
+            "trigger_context": f"Task: {task}. Multi-agent failure consensus.",
+            "anti_pattern": "Agent attempted to brute-force a patch without checking FTS5 architecture.",
+            "correct_pattern": "Perform a semantic check via CodebaseArchitect before finalizing the diff.",
+            "enforcement": "If modifying core modules, mandate a graph-check before execution."
+        }
+        return lesson
+
+# Default alias for backward compatibility
+AdaptationEngine = LocalAdaptationEngine

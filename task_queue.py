@@ -1,9 +1,9 @@
 from typing import Callable, Any, Dict, List, Optional
+import concurrent.futures
 
-class TaskQueue:
+class BaseTaskQueue:
     """
-    TaskQueue parses a Directed Acyclic Graph (DAG) of sub-tasks 
-    and executes them sequentially in topological order.
+    Abstract BaseTaskQueue for DAG parsing and dependency resolution.
     """
     def __init__(self):
         self.graph: Dict[str, List[str]] = {}
@@ -47,6 +47,15 @@ class TaskQueue:
         return execution_order
 
     def execute_all(self) -> Dict[str, Any]:
+        """Must be overridden by subclasses."""
+        raise NotImplementedError("Subclasses must implement execute_all")
+
+
+class SequentialTaskQueue(BaseTaskQueue):
+    """
+    Legacy execution model: Runs tasks sequentially in topological order.
+    """
+    def execute_all(self) -> Dict[str, Any]:
         execution_order = self._topological_sort()
         results = {}
 
@@ -55,10 +64,49 @@ class TaskQueue:
             if not task_func:
                 continue
                 
-            print(f"[TaskQueue] Executing DAG node: {task_id}")
+            print(f"[SequentialTaskQueue] Executing DAG node: {task_id}")
             try:
                 results[task_id] = task_func()
             except Exception as e:
                 raise RuntimeError(f"Task '{task_id}' failed during execution: {e}") from e
 
         return results
+
+
+class AdaptiveRetryTaskQueue(SequentialTaskQueue):
+    """
+    Adaptive execution model: Overrides execution to automatically retry 
+    failed nodes by analyzing the failure.
+    """
+    def __init__(self, max_retries=2):
+        super().__init__()
+        self.max_retries = max_retries
+
+    def execute_all(self) -> Dict[str, Any]:
+        execution_order = self._topological_sort()
+        results = {}
+
+        for task_id in execution_order:
+            task_func = self.tasks.get(task_id)
+            if not task_func:
+                continue
+                
+            print(f"[AdaptiveRetryTaskQueue] Executing DAG node: {task_id}")
+            attempts = 0
+            success = False
+            while attempts < self.max_retries and not success:
+                try:
+                    results[task_id] = task_func()
+                    success = True
+                except Exception as e:
+                    attempts += 1
+                    print(f"⚠️ [AdaptiveRetryTaskQueue] Task '{task_id}' failed (Attempt {attempts}/{self.max_retries}): {e}")
+                    if attempts == self.max_retries:
+                        raise RuntimeError(f"Task '{task_id}' permanently failed after {self.max_retries} attempts.") from e
+                    print(f"[AdaptiveRetryTaskQueue] Adapting and retrying '{task_id}'...")
+                    # Future adaptive logic goes here (e.g., self-healing via agents)
+
+        return results
+
+# Default alias to maintain backward compatibility
+TaskQueue = SequentialTaskQueue
