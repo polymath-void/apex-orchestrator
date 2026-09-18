@@ -26,6 +26,11 @@ def main():
                         user_prompt = entry.get("content", "")
         
         # 3. Check for Apex Trigger
+        if os.environ.get("APEX_ACTIVE") == "1":
+            # Prevent infinite recursive fork bombs
+            print(json.dumps({}))
+            return
+            
         # If the user prompt specifically asks for a deep reasoning pass or starts with /apex
         if "/apex" in user_prompt.lower() or "apex reasoning" in user_prompt.lower():
             # Get current working directory (workspace root)
