@@ -173,6 +173,18 @@ class ApexOrchestrator:
                     subprocess.run(["agy", "--agent", "apex_worker", "--dangerously-skip-permissions", "-p", actor_prompt], cwd=s_dir, env=env)
                 finally:
                     memory_controller.release_allocation(f"Hypothesis {hypothesis['id']}")
+                    
+                    # Immediate self-destruction of the agent's chat instance
+                    if self.main_convo_id:
+                        try:
+                            import shutil
+                            brain_dir = Path.home() / ".gemini" / "antigravity-cli" / "brain"
+                            if brain_dir.exists():
+                                for d in brain_dir.iterdir():
+                                    if d.is_dir() and d.name != self.main_convo_id and len(d.name) > 30:
+                                        shutil.rmtree(d, ignore_errors=True)
+                        except Exception:
+                            pass
                 
                 is_valid, out, critic_report = swarm.run_test_suite(test_command)
                 if is_valid:
