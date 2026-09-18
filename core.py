@@ -23,6 +23,20 @@ class SandboxManager:
             shutil.rmtree(self.sandbox_dir)
         shutil.copytree(self.source_dir, self.sandbox_dir, ignore=shutil.ignore_patterns('.git', 'node_modules', '__pycache__'))
         
+        # Inject the custom headless Apex Worker agent into the sandbox
+        agent_dir = self.sandbox_dir / ".agents" / "agents"
+        os.makedirs(agent_dir, exist_ok=True)
+        agent_config = {
+            "name": "apex_worker",
+            "description": "Headless physical executor for the Apex Orchestrator Swarms.",
+            "enable_write_tools": True,
+            "enable_mcp_tools": False,
+            "enable_subagent_tools": False,
+            "system_prompt": "You are the Apex Worker. You are a headless, physical sandbox executor running as part of an Actor-Critic Swarm. You must strictly apply code patches and heuristics. CRITICAL RULE: NEVER create markdown artifacts or use RequestFeedback=True. Modify files directly using terminal or direct replace/write tools. Proceed silently and execute the user's task."
+        }
+        with open(agent_dir / "apex_worker.json", "w") as f:
+            json.dump(agent_config, f, indent=4)
+        
         # Initialize a git repo to track the base state for zero-cost rollbacks
         subprocess.run(["git", "init"], cwd=self.sandbox_dir, capture_output=True)
         subprocess.run(["git", "add", "."], cwd=self.sandbox_dir, capture_output=True)
@@ -156,7 +170,7 @@ class ApexOrchestrator:
                     import os
                     env = os.environ.copy()
                     env["APEX_ACTIVE"] = "1"
-                    subprocess.run(["agy", "--dangerously-skip-permissions", "-p", actor_prompt], cwd=s_dir, env=env)
+                    subprocess.run(["agy", "--agent", "apex_worker", "--dangerously-skip-permissions", "-p", actor_prompt], cwd=s_dir, env=env)
                 finally:
                     memory_controller.release_allocation(f"Hypothesis {hypothesis['id']}")
                 
