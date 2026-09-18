@@ -182,6 +182,16 @@ class ApexOrchestrator:
                             if brain_dir.exists():
                                 for d in brain_dir.iterdir():
                                     if d.is_dir() and d.name != self.main_convo_id and len(d.name) > 30:
+                                        # Harvest raw data for the Analysis Agent before destruction
+                                        transcript_path = d / ".system_generated" / "logs" / "transcript_full.jsonl"
+                                        db_path = Path(self.project_path) / ".agents" / "trajectories.jsonl"
+                                        if transcript_path.exists():
+                                            os.makedirs(db_path.parent, exist_ok=True)
+                                            with open(transcript_path, 'r') as src, open(db_path, 'a') as dst:
+                                                for line in src:
+                                                    dst.write(line)
+                                                    
+                                        # Destroy the chat instance to keep UI clean
                                         shutil.rmtree(d, ignore_errors=True)
                         except Exception:
                             pass
@@ -256,14 +266,22 @@ class ApexOrchestrator:
         queue.execute_all()
         print(f"=== [Apex Orchestrator] Execution Complete ===")
         
-        # Aggressive UI Chat Cleanup
+        # Aggressive UI Chat Cleanup (Failsafe)
         if self.main_convo_id:
             try:
                 import glob
+                import shutil
                 brain_dir = Path.home() / ".gemini" / "antigravity-cli" / "brain"
                 if brain_dir.exists():
                     for d in brain_dir.iterdir():
                         if d.is_dir() and d.name != self.main_convo_id and len(d.name) > 30:
+                            transcript_path = d / ".system_generated" / "logs" / "transcript_full.jsonl"
+                            db_path = Path(self.project_path) / ".agents" / "trajectories.jsonl"
+                            if transcript_path.exists():
+                                os.makedirs(db_path.parent, exist_ok=True)
+                                with open(transcript_path, 'r') as src, open(db_path, 'a') as dst:
+                                    for line in src:
+                                        dst.write(line)
                             shutil.rmtree(d, ignore_errors=True)
             except Exception as e:
                 print(f"[Orchestrator] Warning: Failed to clean up temp swarm UI chats: {e}")
