@@ -33,11 +33,20 @@ def main():
             
         # If the user prompt specifically asks for a deep reasoning pass or starts with /apex
         if "/apex" in user_prompt.lower() or "apex reasoning" in user_prompt.lower():
+            # Extract main conversation ID from transcript path to protect it during cleanup
+            main_convo_id = ""
+            if transcript_path:
+                parts = Path(transcript_path).parts
+                if "brain" in parts:
+                    idx = parts.index("brain")
+                    if len(parts) > idx + 1:
+                        main_convo_id = parts[idx + 1]
+
             # Get current working directory (workspace root)
             workspace = os.getcwd()
             
             # Initialize the 5-Tier architecture
-            orch = ApexOrchestrator(workspace)
+            orch = ApexOrchestrator(workspace, main_convo_id)
             
             # Execute the deep loop (this will spawn sub-AGY processes in a sandbox)
             # For the hook wrapper, we assume the user specified a test command in the prompt, or we default to a standard test script.

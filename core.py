@@ -92,25 +92,25 @@ class StaticAnalysisSwarm(BaseSwarm):
 class ApexOrchestrator:
     """The Complete 5-Tier Intelligence & Adaptation Engine."""
     def __init__(self, project_path: str,
+                 main_convo_id: str = "",
                  task_queue_cls=None,
                  adaptation_engine_cls=None,
                  swarm_cls=None):
         self.project_path = project_path
+        self.main_convo_id = main_convo_id
         self.workflow_path = os.path.join(project_path, "workflow.json")
         
         # Pluggable Subclasses
         from task_queue import SequentialTaskQueue
-        from adaptation import LocalAdaptationEngine
         
         self.task_queue_cls = task_queue_cls or SequentialTaskQueue
-        self.adaptation_engine_cls = adaptation_engine_cls or LocalAdaptationEngine
         self.swarm_cls = swarm_cls or ActorCriticSwarm
         
         # Initialize Core Engines
         self.memory = CodebaseArchitect(self.project_path)
         self.experience = ExperienceReplayEngine(self.project_path)
         self.reasoner = SystemTwoReasoner(self.memory)
-        self.adaptation = self.adaptation_engine_cls(self.project_path)
+        self.adaptation = AdaptationEngine(self.project_path)
         
         self.memory.map_project() 
         
@@ -226,6 +226,18 @@ class ApexOrchestrator:
         # Execute DAG
         queue.execute_all()
         print(f"=== [Apex Orchestrator] Execution Complete ===")
+        
+        # Aggressive UI Chat Cleanup
+        if self.main_convo_id:
+            try:
+                import glob
+                brain_dir = Path.home() / ".gemini" / "antigravity-cli" / "brain"
+                if brain_dir.exists():
+                    for d in brain_dir.iterdir():
+                        if d.is_dir() and d.name != self.main_convo_id and len(d.name) > 30:
+                            shutil.rmtree(d, ignore_errors=True)
+            except Exception as e:
+                print(f"[Orchestrator] Warning: Failed to clean up temp swarm UI chats: {e}")
         
     def _update_workflow(self, status: str):
         if os.path.exists(self.workflow_path):

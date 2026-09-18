@@ -49,13 +49,13 @@ Return ONLY valid JSON in this format (no markdown blocks, just raw JSON array):
   {{"id": "H3", "approach": "Description of approach 3"}}
 ]
 """
-        env = os.environ.copy()
-        env["APEX_ACTIVE"] = "1"
-        
         try:
-            result = subprocess.run(["agy", "-p", prompt], capture_output=True, text=True, env=env)
-            output = result.stdout.strip()
+            from llm_client import GeminiClient
+            client = GeminiClient()
+            output = client.generate_content(prompt)
+            output = output.strip()
             
+            # Clean markdown formatting if model hallucinates it
             if output.startswith("```json"): output = output[7:]
             if output.startswith("```"): output = output[3:]
             if output.endswith("```"): output = output[:-3]
@@ -63,7 +63,7 @@ Return ONLY valid JSON in this format (no markdown blocks, just raw JSON array):
             hypotheses = json.loads(output.strip())
             return hypotheses
         except Exception as e:
-            print(f"[{self.__class__.__name__}] LLM generation failed ({e}). Falling back to heuristics...")
+            print(f"[System 2 Reasoner] LLM generation failed ({e}). Falling back to heuristics...")
             return [
                 {"id": "H1", "approach": "Direct mutation of state", "risk_score": 0.8},
                 {"id": "H2", "approach": "Subclassing and overriding", "risk_score": 0.5},
