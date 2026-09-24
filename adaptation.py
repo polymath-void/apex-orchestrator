@@ -54,19 +54,52 @@ class LocalAdaptationEngine(BaseAdaptationEngine):
 
 class AgenticAdaptationEngine(BaseAdaptationEngine):
     """
-    Advanced behavior: Uses a sub-agent to synthesize a rule from failures.
+    Advanced behavior: Uses the LLM directly to synthesize a permanent rule from failures.
     """
     def extract_lesson(self, failed_attempts: list, successful_diff: str, task: str):
-        print(f"[{self.__class__.__name__}] Spinning up diagnostic agent to analyze failures and synthesize rule...")
-        # In a real system, we would prompt an LLM here with the `failed_attempts` and `successful_diff`
-        # For now, we simulate an advanced synthesized rule.
-        lesson = {
-            "trigger_context": f"Task: {task}. Multi-agent failure consensus.",
-            "anti_pattern": "Agent attempted to brute-force a patch without checking FTS5 architecture.",
-            "correct_pattern": "Perform a semantic check via CodebaseArchitect before finalizing the diff.",
-            "enforcement": "If modifying core modules, mandate a graph-check before execution."
-        }
-        return lesson
+        print(f"[{self.__class__.__name__}] Spinning up diagnostic engine to analyze failures and synthesize rule...")
+        try:
+            from llm_client import GeminiClient
+            import json
+            
+            llm = GeminiClient()
+            prompt = f"Task: {task}\nFailed Attempts:\n"
+            for i, fail in enumerate(failed_attempts):
+                prompt += f"Attempt {i}: {fail}\n"
+            prompt += f"Successful Diff:\n{successful_diff}\n"
+            prompt += "Based on this, what is the core anti-pattern to avoid and the correct pattern to enforce? Respond with ONLY a JSON object having keys: 'anti_pattern', 'correct_pattern', 'enforcement'."
+            
+            response = llm.generate_content(prompt).strip()
+            
+            if response.startswith('```json'): response = response[7:]
+            if response.startswith('```'): response = response[3:]
+            if response.endswith('```'): response = response[:-3]
+            
+            data = json.loads(response.strip())
+            return {
+                "trigger_context": f"Task: {task}",
+                "anti_pattern": data.get("anti_pattern", "Unknown anti-pattern"),
+                "correct_pattern": data.get("correct_pattern", "Unknown correct pattern"),
+                "enforcement": data.get("enforcement", "Enforce correct pattern")
+            }
+        except Exception as e:
+            print(f"[{self.__class__.__name__}] Failed to synthesize rule dynamically: {e}")
+            return {
+                "trigger_context": f"Task: {task}",
+                "anti_pattern": "Agent attempted brute-force without checking architecture.",
+                "correct_pattern": "Perform a semantic check via CodebaseArchitect.",
+                "enforcement": "Mandate graph-check."
+            }
+
+class HeuristicAdaptationEngine(AgenticAdaptationEngine):
+    """
+    Extracts deep AST heuristics to build targeted rules.
+    """
+    def extract_lesson(self, failed_attempts: list, successful_diff: str, task: str):
+        # We can extend this further to parse the actual AST of successful_diff
+        # For now, it leverages AgenticAdaptationEngine logic with specific prompt tuning.
+        return super().extract_lesson(failed_attempts, successful_diff, task + " (Enforce strict AST safety)")
 
 # Default alias for backward compatibility
-AdaptationEngine = LocalAdaptationEngine
+AdaptationEngine = HeuristicAdaptationEngine
+

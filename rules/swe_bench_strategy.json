@@ -1,0 +1,12 @@
+{
+  "module": "SWE-Bench Pro Competitiveness",
+  "target_metrics": {
+    "issue_resolution_rate": "100%",
+    "patch_accuracy": "Absolute zero regressions."
+  },
+  "execution_tactics": {
+    "reproduce_first": "Always attempt to trigger the bug or run the build to see the baseline error before fixing.",
+    "test_driven_development": "If tests exist, run them. If they don't, write a fast local node/python script to verify logic.",
+    "patch_isolation": "Ensure the fix does not break adjacent microservices."
+  }
+}

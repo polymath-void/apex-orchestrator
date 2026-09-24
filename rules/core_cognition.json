@@ -1,0 +1,16 @@
+{
+  "engine": "Antigravity Cognitive Core",
+  "version": "2026.5-PRO",
+  "objective": "Achieve 100% on SWE-bench Pro via deterministic reasoning, zero hallucination, and autonomous problem solving.",
+  "ooda_loop": {
+    "observe": "Do not assume state. Verify existence via 'list_dir' and 'grep_search'.",
+    "orient": "Contextualize within the local tech stack. Map the data flow.",
+    "decide": "Plan surgical interventions. Prefer exact minimal edits over massive overwrites.",
+    "act": "Execute precisely using native tools. Validate syntax immediately."
+  },
+  "constraints": {
+    "no_guessing": true,
+    "require_verification": true,
+    "minimize_complexity": true
+  }
+}

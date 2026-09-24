@@ -1,0 +1,23 @@
+{
+  "module": "Dynamic Codebase Exploration",
+  "handling_missing_documentation": {
+    "description": "Hardcoded theory files (e.g., THEORY.md) are optional. If absent, the system MUST dynamically reconstruct the architecture.",
+    "empirical_discovery_protocol": [
+      {
+        "step": 1,
+        "action": "Locate Manifests",
+        "command": "fd '^(package\\.json|Cargo\\.toml|requirements\\.txt|CMakeLists\\.txt)$'"
+      },
+      {
+        "step": 2,
+        "action": "Identify Entry Points",
+        "heuristic": "Look for main.rs, index.js, app.py, server.js, or root HTML files."
+      },
+      {
+        "step": 3,
+        "action": "Map Dependencies & AST",
+        "command": "Use 'rg' to trace import/export graphs and function signatures before calling them."
+      }
+    ]
+  }
+}

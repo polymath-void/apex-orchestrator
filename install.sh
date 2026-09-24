@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🧠 Installing Apex Orchestrator Plugin..."
+echo "🧠 Installing Apex Rage Engine Plugin..."
 
 # 1. Determine the target plugin directory
 AGY_CONFIG_DIR="${HOME}/.gemini/config"
 PLUGINS_DIR="${AGY_CONFIG_DIR}/plugins"
-TARGET_DIR="${PLUGINS_DIR}/apex-orchestrator"
+TARGET_DIR="${PLUGINS_DIR}/apex"
 
 mkdir -p "$PLUGINS_DIR"
 
@@ -38,6 +38,6 @@ cat <<EOF > "$HOOKS_FILE"
 }
 EOF
 
-echo "✅ Apex Orchestrator successfully installed!"
+echo "✅ Apex Rage Engine successfully installed!"
 echo "   Location: $TARGET_DIR"
 echo "   To use it, just type: agy -p \"/apex <your prompt>\""

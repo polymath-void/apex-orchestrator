@@ -43,10 +43,21 @@ class ExperienceReplayEngine:
     def retrieve_relevant_experience(self, current_task: str):
         """Searches past memory for a similar task and returns the diff that solved it."""
         import re
+        
+        # Use LLM to extract core architectural concepts for better FTS matching
+        try:
+            from llm_client import GeminiClient
+            client = GeminiClient()
+            prompt = f"Extract 3-5 core architectural keywords from this task to use as a database search query. Return ONLY space-separated keywords.\nTask: {current_task}"
+            keywords_str = client.generate_content(prompt).strip()
+            search_text = f"{current_task} {keywords_str}"
+        except Exception:
+            search_text = current_task
+
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
         
-        words = re.findall(r'\b[a-zA-Z0-9_]+\b', current_task)
+        words = re.findall(r'\b[a-zA-Z0-9_]+\b', search_text)
         fts_query = " OR ".join([f"{w}*" for w in words if len(w) > 3])
         
         if not fts_query:

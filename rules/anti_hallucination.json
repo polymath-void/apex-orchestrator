@@ -1,0 +1,13 @@
+{
+  "module": "Strict Boundary Enforcement",
+  "trigger_conditions": [
+    "Generating random port numbers without checking configuration.",
+    "Invoking 'standard' algorithms (e.g., Solfeggio frequencies) instead of reading project math logic.",
+    "Assuming an API endpoint exists without checking the routing files."
+  ],
+  "mitigation_strategies": {
+    "variable_names": "Must be copy-pasted or strictly verified via search, never generated from memory.",
+    "file_paths": "Always use absolute paths derived from list_dir or find.",
+    "third_party_libraries": "Do not invoke library methods unless verifying they exist in the currently installed version."
+  }
+}

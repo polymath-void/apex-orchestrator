@@ -17,7 +17,7 @@ class SandboxManager:
         self.sandbox_id = f"sandbox_{int(time.time())}"
         self.sandbox_dir = self.sandbox_base / self.sandbox_id
         
-    def create_sandbox(self):
+    def create_sandbox(self, hypothesis: dict = None):
         os.makedirs(self.sandbox_base, exist_ok=True)
         if self.sandbox_dir.exists():
             shutil.rmtree(self.sandbox_dir)
@@ -26,13 +26,40 @@ class SandboxManager:
         # Inject the custom headless Apex Worker agent into the sandbox
         agent_dir = self.sandbox_dir / ".agents" / "agents"
         os.makedirs(agent_dir, exist_ok=True)
+        
+        # Load Cognitive Rules from the merged blueprint
+        rules_text = ""
+        plugin_rules_dir = Path(__file__).parent / "rules"
+        if plugin_rules_dir.exists():
+            rules_text += "\n\n### COGNITIVE ARCHITECTURE BLUEPRINT ###\n"
+            for rule_file in sorted(plugin_rules_dir.glob("*")):
+                if rule_file.suffix in [".json", ".md"]:
+                    try:
+                        rules_text += f"\n--- {rule_file.name} ---\n{rule_file.read_text()}\n"
+                    except:
+                        pass
+        
+        system_prompt = "You are the Apex Worker. You are a headless, physical sandbox executor running as part of an Actor-Critic Swarm. You must strictly apply code patches and heuristics. CRITICAL RULE: NEVER create markdown artifacts or use RequestFeedback=True. Modify files directly using terminal or direct replace/write tools. Proceed silently and execute the user's task."
+        system_prompt += rules_text
+        
+        if hypothesis:
+            system_prompt += f"\n\nSPECIALIZATION (Tailored for this Hypothesis):\nYour specific approach is: {hypothesis.get('approach', 'Execute standard patch')}. Prioritize this strategy."
+            try:
+                from llm_client import GeminiClient
+                client = GeminiClient()
+                prompt = f"Given this hypothesis to execute: {hypothesis.get('approach')}, write a 2-sentence specific instruction for an AI agent on how it should behave and what tools it should prioritize. Return only the instructions."
+                specialization = client.generate_content(prompt).strip()
+                system_prompt += f"\n\nAdaptive Instruction: {specialization}"
+            except Exception:
+                pass
+                
         agent_config = {
             "name": "apex_worker",
-            "description": "Headless physical executor for the Apex Orchestrator Swarms.",
+            "description": "Headless physical executor for the Apex Rage Engine Swarms.",
             "enable_write_tools": True,
             "enable_mcp_tools": False,
             "enable_subagent_tools": False,
-            "system_prompt": "You are the Apex Worker. You are a headless, physical sandbox executor running as part of an Actor-Critic Swarm. You must strictly apply code patches and heuristics. CRITICAL RULE: NEVER create markdown artifacts or use RequestFeedback=True. Modify files directly using terminal or direct replace/write tools. Proceed silently and execute the user's task."
+            "system_prompt": system_prompt
         }
         with open(agent_dir / "apex_worker.json", "w") as f:
             json.dump(agent_config, f, indent=4)
@@ -115,9 +142,9 @@ class ApexOrchestrator:
         self.workflow_path = os.path.join(project_path, "workflow.json")
         
         # Pluggable Subclasses
-        from task_queue import SequentialTaskQueue
+        from task_queue import ParallelSwarmQueue
         
-        self.task_queue_cls = task_queue_cls or SequentialTaskQueue
+        self.task_queue_cls = task_queue_cls or ParallelSwarmQueue
         self.swarm_cls = swarm_cls or ActorCriticSwarm
         
         # Initialize Core Engines
@@ -129,7 +156,7 @@ class ApexOrchestrator:
         self.memory.map_project() 
         
     def execute_task(self, task_description: str, test_command: str):
-        print(f"\n=== [Apex Orchestrator] Booting Intelligence Sequence ===")
+        print(f"\n=== [Apex Rage Engine] Booting Intelligence Sequence ===")
         
         queue = self.task_queue_cls()
         state = {}
@@ -140,8 +167,9 @@ class ApexOrchestrator:
                 print(f"[Episodic Memory] Injecting past successful trajectory...")
         
         def generate_hypotheses():
+            state['generation'] = 1
             state['hypotheses'] = self.reasoner.generate_hypotheses(task_description, [])
-            print(f"[Memory Safe Compute] Testing {len(state['hypotheses'])} distinct hypotheses sequentially...")
+            print(f"[Memory Safe Compute] Generation {state['generation']}: Racing {len(state['hypotheses'])} hypotheses...")
             
         def run_sandbox_race(hypothesis, memory_controller):
             sandbox = SandboxManager(self.project_path)
@@ -170,7 +198,21 @@ class ApexOrchestrator:
                     import os
                     env = os.environ.copy()
                     env["APEX_ACTIVE"] = "1"
-                    subprocess.run(["agy", "--agent", "apex_worker", "--dangerously-skip-permissions", "-p", actor_prompt], cwd=s_dir, env=env)
+                    try:
+                        print(f"[{s_dir.name}] Invoking AGY worker (Max timeout 120s)...")
+                        result = subprocess.run(
+                            ["agy", "--agent", "apex_worker", "--dangerously-skip-permissions", "-p", actor_prompt], 
+                            cwd=s_dir, 
+                            env=env,
+                            timeout=120,
+                            capture_output=True,
+                            text=True
+                        )
+                        if result.returncode != 0:
+                            print(f"[{s_dir.name}] Worker failed or exited early. Stderr: {result.stderr[:200]}")
+                    except subprocess.TimeoutExpired:
+                        print(f"[{s_dir.name}] CRITICAL: AGY Worker timed out after 120s. Force-killing swarm node.")
+
                 finally:
                     memory_controller.release_allocation(f"Hypothesis {hypothesis['id']}")
                     
@@ -208,30 +250,39 @@ class ApexOrchestrator:
         def execute_hypotheses():
             import concurrent.futures
             from memory_controller import BankersMemoryController
+            from evolution import SemanticEvolutionEngine
             
-            # Initialize Banker's Controller with safe Android margins
             mem_controller = BankersMemoryController(agent_mb=250, safe_margin_mb=350)
+            evo_engine = SemanticEvolutionEngine(self.memory)
             
+            max_generations = 3
             success_result = None
             failed_attempts = []
             
-            print(f"[Scaling Compute] Racing {len(state['hypotheses'])} distinct hypotheses via AIMD Memory Parallelism...")
-            
-            with concurrent.futures.ThreadPoolExecutor(max_workers=len(state['hypotheses'])) as executor:
-                futures = {executor.submit(run_sandbox_race, h, mem_controller): h for h in state['hypotheses']}
+            while state['generation'] <= max_generations and not success_result:
+                print(f"[Scaling Compute] Generation {state['generation']} Race (Parallel Swarms)...")
                 
-                for future in concurrent.futures.as_completed(futures):
-                    result = future.result()
-                    if result["is_valid"]:
-                        print(f"\n🚀 [Swarm Intelligence] Hypothesis {result['hypothesis']['id']} succeeded first! Terminating race.")
-                        success_result = result
-                        # Cancel remaining futures if possible, or just let them clean up
-                        break
-                    else:
-                        print(f"\n❌ [Swarm Intelligence] Hypothesis {result['hypothesis']['id']} failed.")
-                        failed_attempts.append(result["critic_report"])
-                        result["sandbox"].cleanup()
-                        
+                with concurrent.futures.ThreadPoolExecutor(max_workers=len(state['hypotheses'])) as executor:
+                    futures = {executor.submit(run_sandbox_race, h, mem_controller): h for h in state['hypotheses']}
+                    
+                    for future in concurrent.futures.as_completed(futures):
+                        result = future.result()
+                        if result["is_valid"]:
+                            print(f"\n🚀 [Swarm Intelligence] Gen {state['generation']} Hypothesis {result['hypothesis']['id']} succeeded!")
+                            success_result = result
+                            break
+                        else:
+                            print(f"\n❌ [Swarm Intelligence] Gen {state['generation']} Hypothesis {result['hypothesis']['id']} failed.")
+                            failed_attempts.append(result)
+                            result["sandbox"].cleanup()
+                            
+                if not success_result:
+                    state['generation'] += 1
+                    if state['generation'] <= max_generations:
+                        print(f"[Evolution] All swarms failed. Mutating hypotheses for Generation {state['generation']}...")
+                        state['hypotheses'] = evo_engine.mutate_hypotheses(failed_attempts, task_description)
+                        failed_attempts = [] # Reset for next gen
+
             state['success_result'] = success_result
             state['failed_attempts'] = failed_attempts
             
@@ -246,15 +297,19 @@ class ApexOrchestrator:
                 self.experience.record_experience(task_description, "NONE", "SIMULATED_SUCCESSFUL_PATCH")
                 
                 if len(failed_attempts) > 0:
-                    lesson = self.adaptation.extract_lesson(failed_attempts, "SUCCESS", task_description)
+                    # Extract lessons from failed attempts from this generation
+                    failed_summaries = [f"Appr: {f['hypothesis']['approach']} | Err: {f['critic_report'][:100]}" for f in failed_attempts]
+                    lesson = self.adaptation.extract_lesson(failed_summaries, "SUCCESS", task_description)
                     self.adaptation.write_permanent_rule(lesson)
                     
                 winning_sandbox.cleanup()
             else:
-                print("[Orchestrator] Fatal Failure across ALL swarms. Extracting anti-pattern rule to prevent repeat...")
+                print("[Orchestrator] Fatal Failure across ALL generations. Extracting anti-pattern rule...")
                 self._update_workflow("failed")
-                lesson = self.adaptation.extract_lesson(failed_attempts, "NONE", task_description)
+                failed_summaries = [f"Appr: {f['hypothesis']['approach']} | Err: {f['critic_report'][:100]}" for f in failed_attempts]
+                lesson = self.adaptation.extract_lesson(failed_summaries, "NONE", task_description)
                 self.adaptation.write_permanent_rule(lesson)
+
                 
         # Build DAG
         queue.add_task("memory", retrieve_memory)
@@ -264,7 +319,7 @@ class ApexOrchestrator:
         
         # Execute DAG
         queue.execute_all()
-        print(f"=== [Apex Orchestrator] Execution Complete ===")
+        print(f"=== [Apex Rage Engine] Execution Complete ===")
         
         # Aggressive UI Chat Cleanup (Failsafe)
         if self.main_convo_id:

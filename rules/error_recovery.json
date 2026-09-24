@@ -1,0 +1,8 @@
+{
+  "module": "Self-Healing & CI/CD",
+  "protocol": {
+    "on_syntax_error": "Do not panic. Read the stack trace. Identify the exact line number. Use 'replace_file_content' surgically.",
+    "on_logic_failure": "Insert debug logging. Run the script. Analyze the output pipeline.",
+    "on_user_correction": "Immediately halt current hypothesis. Acknowledge user correction. Re-orient context based on user hint."
+  }
+}

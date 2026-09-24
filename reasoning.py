@@ -1,6 +1,18 @@
 import json
 from pathlib import Path
 
+import re
+def clean_json_output(output: str) -> str:
+    """Strips markdown code blocks from LLM output so json.loads doesn't crash."""
+    output = output.strip()
+    if output.startswith("```"):
+        output = re.sub(r"^```(?:json)?
+", "", output)
+        output = re.sub(r"
+```$", "", output)
+    return output
+
+
 class BaseReasoner:
     """
     Tier 4 Abstract Base: Dynamic Chain-of-Thought & Tree of Thoughts Engine.
@@ -29,12 +41,16 @@ class LLMMonteCarloReasoner(BaseReasoner):
         print(f"[{self.__class__.__name__}] Gathering adaptive rules and generating hypotheses...")
         
         rules_text = ""
-        project_dir = Path.cwd()
-        rules_dir = project_dir / ".agents" / "rules"
-        if rules_dir.exists():
-            for rule_file in rules_dir.glob("*.md"):
-                with open(rule_file, "r") as f:
-                    rules_text += f"\n--- {rule_file.name} ---\n{f.read()}\n"
+        # Dynamically load from merged plugin rules
+        plugin_rules_dir = Path(__file__).parent / "rules"
+        if plugin_rules_dir.exists():
+            for rule_file in sorted(plugin_rules_dir.glob("*")):
+                if rule_file.suffix in [".json", ".md"]:
+                    try:
+                        with open(rule_file, "r") as f:
+                            rules_text += f"\n--- {rule_file.name} ---\n{f.read()}\n"
+                    except:
+                        pass
 
         prompt = f"""Task: {task_description}
 
@@ -60,7 +76,7 @@ Return ONLY valid JSON in this format (no markdown blocks, just raw JSON array):
             if output.startswith("```"): output = output[3:]
             if output.endswith("```"): output = output[:-3]
             
-            hypotheses = json.loads(output.strip())
+            hypotheses = json.loads(clean_json_output(output))
             return hypotheses
         except Exception as e:
             print(f"[System 2 Reasoner] LLM generation failed ({e}). Falling back to heuristics...")
@@ -78,13 +94,32 @@ Return ONLY valid JSON in this format (no markdown blocks, just raw JSON array):
         return optimal
 
     def decompose_task(self, optimal_hypothesis: dict):
-        print(f"[{self.__class__.__name__}] Decomposing selected path into actionable DAG...")
-        dag = [
-            {"step": 1, "action": "Locate target function via FTS5"},
-            {"step": 2, "action": "Draft localized patch"},
-            {"step": 3, "action": "Run isolated integration test"}
-        ]
-        return dag
+        print(f"[{self.__class__.__name__}] Decomposing optimal hypothesis into actionable DAG...")
+        try:
+            from llm_client import GeminiClient
+            client = GeminiClient()
+            prompt = f"""Optimal Hypothesis: {optimal_hypothesis['approach']}
+Decompose this approach into a sequence of actionable steps (maximum 5).
+Return ONLY valid JSON in this format:
+[
+  {{"step": 1, "action": "Description of step 1"}},
+  {{"step": 2, "action": "Description of step 2"}}
+]
+"""
+            output = client.generate_content(prompt).strip()
+            if output.startswith("```json"): output = output[7:]
+            if output.startswith("```"): output = output[3:]
+            if output.endswith("```"): output = output[:-3]
+            
+            dag = json.loads(clean_json_output(output))
+            return dag
+        except Exception as e:
+            print(f"[{self.__class__.__name__}] Task decomposition failed: {e}. Falling back to default DAG.")
+            return [
+                {"step": 1, "action": "Locate target function via FTS5"},
+                {"step": 2, "action": "Draft localized patch"},
+                {"step": 3, "action": "Run isolated integration test"}
+            ]
 
 
 class MultiAgentReasoner(LLMMonteCarloReasoner):
@@ -94,14 +129,45 @@ class MultiAgentReasoner(LLMMonteCarloReasoner):
     """
     def evaluate_and_select(self, hypotheses: list):
         print(f"[{self.__class__.__name__}] Spawning Red Team / Blue Team sub-agents for hypothesis debate...")
-        # Simulated agentic debate override
-        for h in hypotheses:
-            print(f" -> Agent 'Security Auditor' reviewing {h['id']}...")
-            h["risk_score"] = 0.1 if "decoupling" in h["approach"].lower() else 0.9
+        try:
+            from llm_client import GeminiClient
+            client = GeminiClient()
             
+            hypotheses_text = json.dumps(hypotheses, indent=2)
+            
+            prompt = f"""You are a council of specialized software architects: a Security Auditor, a Performance Engineer, and a Maintainability Expert.
+Review the following architectural hypotheses:
+{hypotheses_text}
+
+Debate and score each hypothesis from 0.0 (high risk/bad) to 1.0 (low risk/good) based on security, performance, and maintainability.
+Return ONLY valid JSON in this format (no markdown blocks, just raw JSON array of the updated hypotheses):
+[
+  {{"id": "H1", "approach": "...", "risk_score": 0.2}},
+  {{"id": "H2", "approach": "...", "risk_score": 0.8}}
+]
+"""
+            output = client.generate_content(prompt)
+            output = output.strip()
+            
+            if output.startswith("```json"): output = output[7:]
+            if output.startswith("```"): output = output[3:]
+            if output.endswith("```"): output = output[:-3]
+            
+            evaluated_hypotheses = json.loads(clean_json_output(output))
+            
+            # Merge scores back to original hypotheses just in case
+            score_map = {h.get("id"): h.get("risk_score", 0.5) for h in evaluated_hypotheses if "id" in h}
+            for h in hypotheses:
+                h["risk_score"] = score_map.get(h["id"], 0.5)
+                
+        except Exception as e:
+            print(f"[{self.__class__.__name__}] LLM debate failed: {e}. Falling back to simple heuristic.")
+            for h in hypotheses:
+                h["risk_score"] = 0.1 if "decoupling" in h["approach"].lower() else 0.9
+
         ranked = sorted(hypotheses, key=lambda x: x.get("risk_score", 0.5))
         optimal = ranked[0]
-        print(f"[{self.__class__.__name__}] Multi-Agent consensus reached! Optimal Path: {optimal['id']} - {optimal['approach']}")
+        print(f"[{self.__class__.__name__}] Multi-Agent consensus reached! Optimal Path: {optimal['id']} - {optimal['approach']} (Score: {optimal.get('risk_score')})")
         return optimal
 
 # Default alias for backward compatibility

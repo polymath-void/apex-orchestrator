@@ -8,7 +8,7 @@ def run_system_test():
     print("=== Starting Orchestrator System Test ===")
     
     # Setup dummy project
-    dummy_dir = "/data/data/com.termux/files/home/Projects/DummyTarget"
+    dummy_dir = str(Path.home() / "Projects" / "DummyTarget")
     os.makedirs(dummy_dir, exist_ok=True)
     
     # Write broken code
@@ -33,7 +33,7 @@ sys.exit(0)
         import json
         json.dump({"status": "pending", "type": "JSON_Task"}, f)
 
-    print("\n--- Booting Apex Orchestrator (Live AGY Connection) ---")
+    print("\n--- Booting Apex Rage Engine (Live AGY Connection) ---")
     orch = ApexOrchestrator(dummy_dir)
     orch.execute_task("Fix the bug in math_lib.py where add() subtracts instead of adds.", "python3 test_math.py")
     

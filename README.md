@@ -1,4 +1,4 @@
-# 🧠 Apex Orchestrator (Antigravity Plugin)
+# 🧠 Apex Rage Engine (Antigravity Plugin)
 
 A natively integrated, 5-Tier Cognitive Architecture for the Google Antigravity (AGY) Agent Ecosystem. 
 
@@ -26,7 +26,7 @@ This plugin is fully portable and cross-platform (macOS, Linux, Android/Termux, 
 
 ## 🚀 Usage
 
-Once installed, the Apex Orchestrator binds globally to your Antigravity agent via the `PreInvocation` hook.
+Once installed, the Apex Rage Engine binds globally to your Antigravity agent via the `PreInvocation` hook.
 
 To trigger the 5-Tier loop instead of standard AGY execution, simply include the keyword `/apex` in your prompt.
 

@@ -1,0 +1,9 @@
+{
+  "module": "Sub-Agent Swarm Logic",
+  "philosophy": "Agents must be highly specialized, contextually bound, and output raw data.",
+  "invocation_rules": {
+    "role_definition": "Assign a strict, narrow role (e.g., 'WebRTC SDP Negotiator' instead of 'Network Guy').",
+    "prompt_structure": "Pass exact file paths. Demand structured JSON output or precise Markdown sections.",
+    "wait_and_verify": "Do not assume agent success. Read their generated artifacts before executing downstream logic."
+  }
+}

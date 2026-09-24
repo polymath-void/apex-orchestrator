@@ -61,7 +61,7 @@ def main():
             # Force continue but inject an ephemeral message so the user knows Apex handled it natively.
             response = {
                 "injectSteps": [
-                    {"ephemeralMessage": "🧠 [Apex Orchestrator] Successfully intercepted task, ran 5-Tier reasoning loop, and applied verified patch to workspace."}
+                    {"ephemeralMessage": "🧠 [Apex Rage Engine] Successfully intercepted task, ran 5-Tier reasoning loop, and applied verified patch to workspace."}
                 ],
                 "terminationBehavior": "force_continue"
             }

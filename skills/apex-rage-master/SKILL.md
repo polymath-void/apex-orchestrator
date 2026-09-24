@@ -1,17 +1,17 @@
 ---
 name: apex-master
 description: >-
-  The Apex Orchestrator Cognitive Architecture. Triggers deep, 5-Tier 
+  The Apex Rage Engine Cognitive Architecture. Triggers deep, 5-Tier 
   metacognitive reasoning, Monte Carlo Tree Search, and Actor-Critic Swarm 
   sandboxing to solve complex software engineering tasks with 95%+ SWE-Bench dominance.
 ---
 
-# 🧠 The Apex Orchestrator (Master Architect)
+# 🧠 The Apex Rage Engine (Master Architect)
 
-The **Apex Orchestrator** is natively installed into this AGY agent via a global `PreInvocation` hook. It mathematically forces the Gemini 3.1 Pro model to abandon "lazy" System 1 guessing and routes it through a rigorous 5-Tier intelligence loop.
+The **Apex Rage Engine** is natively installed into this AGY agent via a global `PreInvocation` hook. It mathematically forces the Gemini 3.1 Pro model to abandon "lazy" System 1 guessing and routes it through a rigorous 5-Tier intelligence loop.
 
 ## How to Trigger
-To activate the Apex Orchestrator instead of standard AGY execution, include the keyword `/apex` anywhere in your prompt.
+To activate the Apex Rage Engine instead of standard AGY execution, include the keyword `/apex` anywhere in your prompt.
 
 **Example:**
 > "/apex Fix the user authentication bug. test_command=pytest auth_tests.py"

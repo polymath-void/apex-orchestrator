@@ -1,7 +1,7 @@
 {
-  "name": "apex-orchestrator",
+  "name": "Apex-Rage-Engine",
   "version": "1.0.0",
-  "description": "Deeply integrates the 5-Tier Apex Cognitive Architecture into Antigravity.",
+  "description": "Universal plugin for agent adaptations, providing the 5-Tier Apex Cognitive Architecture for any swarm.",
   "hooks": ["hooks.json"],
-  "skills": ["skills/apex-master/SKILL.md"]
+  "skills": ["skills/apex-rage-master/SKILL.md"]
 }

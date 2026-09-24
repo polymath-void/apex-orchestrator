@@ -1,0 +1,18 @@
+{
+  "system": "Google Antigravity CLI (Android Termux / Bionic libc)",
+  "runtime_environment": {
+    "os": "linux",
+    "shell": "bash",
+    "fhs_quirks": "Binaries live in $PREFIX/bin (/data/data/com.termux/files/usr/bin/)"
+  },
+  "core_tools": {
+    "file_operations": ["view_file", "list_dir", "find_by_name", "grep_search"],
+    "code_editing": ["replace_file_content", "write_to_file"],
+    "execution": ["run_command", "manage_task"],
+    "swarm_orchestration": ["invoke_subagent", "define_subagent", "send_message", "manage_subagents"]
+  },
+  "asynchronous_execution": {
+    "paradigm": "Reactive Wakeup (No Polling)",
+    "rule": "After launching a background task or subagent, immediately yield the turn. The system auto-resumes execution upon task completion or subagent message."
+  }
+}

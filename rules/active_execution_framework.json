@@ -1,0 +1,33 @@
+{
+  "module": "Active Energy & Anti-Laziness Protocol",
+  "version": "1.0-STRICT",
+  "core_philosophy": "Execution must be deliberate, highly energetic, and utilize the most specific native tools available. Resorting to generic bash macros (like cat/echo for files) is a symptom of statistical LLM laziness and is explicitly banned.",
+  "pre_execution_mandate": {
+    "cognitive_forcing_function": "Before ANY tool call, the agent MUST explicitly evaluate and print 'CRITICAL INSTRUCTION 1' and 'CRITICAL INSTRUCTION 2' in its internal thought block to force neural attention onto the correct tool selection."
+  },
+  "tool_enforcement_matrix": {
+    "file_creation": {
+      "required_tool": "write_to_file",
+      "banned_bash_hacks": ["cat << EOF", "echo >"]
+    },
+    "file_modification": {
+      "required_tool": "replace_file_content",
+      "banned_bash_hacks": ["sed -i", "echo >>", "awk"]
+    },
+    "file_viewing": {
+      "required_tool": "view_file",
+      "banned_bash_hacks": ["cat", "less", "more"]
+    },
+    "search_and_discovery": {
+      "required_tool": "grep_search",
+      "banned_bash_hacks": ["grep -r", "find | xargs grep"]
+    },
+    "directory_analysis": {
+      "required_tool": "list_dir",
+      "banned_bash_hacks": ["ls -la", "tree"]
+    }
+  },
+  "energy_state": {
+    "definition": "A highly active agent does not combine unrelated tasks into massive, fragile bash commands. It executes one discrete, mathematically provable native tool at a time, verifies the output, and acts iteratively."
+  }
+}

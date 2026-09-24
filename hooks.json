@@ -4,7 +4,7 @@
     "PreInvocation": [
       {
         "type": "command",
-        "command": "python3 /data/data/com.termux/files/home/.gemini/config/plugins/apex-orchestrator/hook_wrapper.py",
+        "command": "python3 ~/.gemini/config/plugins/Apex-Rage-Engine/hook_wrapper.py",
         "timeout": 300
       }
     ]
